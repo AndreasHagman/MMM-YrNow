@@ -46,3 +46,27 @@
   fill: #00B9F1;
   -webkit-transition: opacity 600ms cubic-bezier(0.645, 0.045, 0.355, 1);
 }
+.MMM-YrNow .precipChart {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    height: 68px;
+    margin-top: 8px;
+}
+
+.MMM-YrNow .precipChartArea {
+    fill: rgba(0, 185, 241, 0.55);
+    stroke: #00B9F1;
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
+
+.MMM-YrNow .precipChartBaseline {
+    stroke: rgba(255, 255, 255, 0.25);
+    stroke-width: 1;
+}
+
+.MMM-YrNow .precipChartLabel {
+    fill: rgba(255, 255, 255, 0.6);
+    font-size: 9px;
+}
