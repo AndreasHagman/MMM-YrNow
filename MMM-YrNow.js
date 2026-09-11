@@ -152,7 +152,7 @@ Module.register('MMM-YrNow', {
         var coords = this.list.points.map((point) => {
             var minutesFromNow = (Date.parse(point.time) - now) / 60000;
             var intensity = (point.precipitation && point.precipitation.intensity) || 0;
-            var frac = Math.min(1, intensity / maxScale);
+            var frac = Math.sqrt(Math.min(1, intensity / maxScale));
             return {
                 minutes: minutesFromNow,
                 x: Math.max(0, Math.min(width, (minutesFromNow / maxMinutes) * width)),
