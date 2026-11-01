@@ -38,11 +38,17 @@ Module.register('MMM-YrNow', {
 
     socketNotificationReceived: function(notification, payload) {
         if (notification === 'YR_FORECAST_DATA') {
-            if (payload.nowcast.points != null) {
+            if (payload.nowcast) {
                 this.processNowcast(payload.nowcast);
-                if (this.config.showWeatherForecast)
-                    this.processForecast(payload.forecast);
             }
+            if (this.config.showWeatherForecast && payload.forecast)
+                this.processForecast(payload.forecast);
+            this.updateDom(1000);
+        }
+        if (notification === 'YR_FORECAST_ERROR') {
+            // Keep last data; isNowcastAvailable() flags it once it goes stale.
+            // Mark loaded so a failure at startup shows "unavailable" instead of "Laster inn..." forever.
+            this.loaded = true;
             this.updateDom(1000);
         }
     },
@@ -52,6 +58,15 @@ Module.register('MMM-YrNow', {
             forecastUrl: url,
             config: this.config
         });
+    },
+
+    // Nowcast is usable only if the radar is up and there are points covering the near future
+    isNowcastAvailable: function() {
+        if (!this.list || this.list.radarIsDown || !this.list.points || this.list.points.length === 0) {
+            return false;
+        }
+        var now = new Date().valueOf();
+        return this.list.points.some((item) => Date.parse(item.time) >= now);
     },
 
     getNextPrecipStart: function() {
@@ -78,9 +93,10 @@ Module.register('MMM-YrNow', {
             wrapper.className = 'dimmed light small';
             return wrapper;
         }
-        var nowCast = this.translate('no_precip_next_90');
-        var precipitationStart = this.getNextPrecipStart();
-        var precipitationStop = this.getNextPrecipStop();
+        var nowcastAvailable = this.isNowcastAvailable();
+        var nowCast = nowcastAvailable ? this.translate('no_precip_next_90') : this.translate('nowcast_unavailable');
+        var precipitationStart = nowcastAvailable ? this.getNextPrecipStart() : null;
+        var precipitationStop = nowcastAvailable ? this.getNextPrecipStop() : null;
         var forecast = document.createElement('div');
         forecast.className = 'forecast small';
         forecast.style.height = this.config.forecastWrapperHeight;
@@ -108,14 +124,20 @@ Module.register('MMM-YrNow', {
             }
         }
 
-        if (nowCast == this.translate('no_precip_next_90') && this.config.showWeatherForecast) {
+        if (precipitationStart == null && this.config.showWeatherForecast && this.weatherSymbol) {
             forecast.appendChild(this.getWeatherSymbol());
         }
         wrapper.appendChild(forecast);
-        wrapper.appendChild(this.getTemperature());
-        wrapper.appendChild(this.createNowcastText(nowCast));
+        if (this.temperature != null) {
+            wrapper.appendChild(this.getTemperature());
+        }
+        var nowCastText = this.createNowcastText(nowCast);
+        if (!nowcastAvailable) {
+            nowCastText.className += ' dimmed';
+        }
+        wrapper.appendChild(nowCastText);
 
-        var precipChart = this.createPrecipChart();
+        var precipChart = nowcastAvailable ? this.createPrecipChart() : null;
         if (precipChart) {
             wrapper.appendChild(precipChart);
         }
@@ -241,10 +263,9 @@ Module.register('MMM-YrNow', {
     },
 
     processNowcast: function(obj) {
-        if (obj.points) {
-            this.list = obj;
-            this.loaded = true;
-        }
+        // Store even when points is empty/missing (e.g. radarIsDown) so getDom can show it as unavailable
+        this.list = obj;
+        this.loaded = true;
     },
 
     calculateWeatherSymbolId: function(data) {
